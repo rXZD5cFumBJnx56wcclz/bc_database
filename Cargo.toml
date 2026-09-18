@@ -1,14 +1,12 @@
 [package]
-name = "bc_statistics"
-version = "0.1.0"
+name = "bc_database"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
-bc_utils_lg = {path = "../bc_utils_lg"}
-bc_utils = {path = "../bc_utils"}
+bc_utils_lg = {path = "../bc_utils_lg", features = ["test_state"]}
 bc_trade_state = {path = "../bc_trade_state"}
-
-num-traits = {version = "0.2"}
+bc_runtime_components = {path = "../bc_runtime_components", features = ["test_state"]}
 
 [dev-dependencies]
-pretty_assertions = "1"
+bc_test_kit = {path = "../bc_test_kit"}
