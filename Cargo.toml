@@ -1,12 +1,14 @@
 [package]
 name = "bc_database"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 
 [dependencies]
 bc_utils_lg = {path = "../bc_utils_lg", features = ["test_state"]}
 bc_trade_state = {path = "../bc_trade_state"}
 bc_runtime_components = {path = "../bc_runtime_components", features = ["test_state"]}
+
+memmap2 = "0.9"
 
 [dev-dependencies]
 bc_test_kit = {path = "../bc_test_kit"}
