@@ -1,5 +1,5 @@
-use std::time::{Duration, SystemTime};
 use std::mem::take;
+use std::time::{Duration, SystemTime};
 
 use bc_runtime_components::state::State;
 use bc_utils_lg::prelude::*;
@@ -30,26 +30,24 @@ impl DatabaseRT {
 
     pub fn push_src(&mut self, src: &[f64]) {
         for (i, v) in src.iter().enumerate() {
-            self.current_map.insert(format!("src_{i}", ), *v);
+            self.current_map.insert(format!("src_{i}",), *v);
         }
     }
 
     pub fn push_state(&mut self, state: &State) {
         for (k, v) in state.indications.iter() {
-            self.current_map.insert(format!("ind_{k}", ), *v);
+            self.current_map.insert(format!("ind_{k}",), *v);
         }
         for (k, v) in state.signals_train.iter() {
-            self.current_map.insert(format!("signtr_{k}", ), *v);
+            self.current_map.insert(format!("signtr_{k}",), *v);
         }
         for (k, v) in state.signals.iter() {
+            self.current_map.insert(format!("sign&sign_{k}",), v.signal);
             self.current_map
-                .insert(format!("sign&sign_{k}", ), v.signal);
-            self.current_map
-                .insert(format!("sign&prob_{k}", ), v.probability);
+                .insert(format!("sign&prob_{k}",), v.probability);
         }
         for (k, v) in state.utils_state.iter() {
-            self.current_map
-                .insert(format!("utilsstate_{k}", ), *v);
+            self.current_map.insert(format!("utilsstate_{k}",), *v);
         }
         for (k, v) in state.orders.iter() {
             self.current_map
@@ -58,19 +56,25 @@ impl DatabaseRT {
                 .insert(format!("ordercreate&commission_{}", k), v.order.commission);
             self.current_map
                 .insert(format!("ordercreate&leverage_{}", k), v.order.leverage);
-            self.current_map
-                .insert(format!("ordercreate&istrigger_{}", k), v.is_trigger as i8 as f64);
+            self.current_map.insert(
+                format!("ordercreate&istrigger_{}", k),
+                v.is_trigger as i8 as f64,
+            );
             let trigger = v.trigger.clone().unwrap_or_default();
-            self.current_map
-                .insert(format!("ordercreate&triggerdirection_{}", k), trigger.direction as f64);
+            self.current_map.insert(
+                format!("ordercreate&triggerdirection_{}", k),
+                trigger.direction as f64,
+            );
             self.current_map
                 .insert(format!("ordercreate&pricetrigger_{}", k), trigger.price);
         }
         for (k, v) in state.orders_filtered.iter() {
+            self.current_map.insert(
+                format!("orderfilter&ispassed_{}", k),
+                v.0.is_some() as i8 as f64,
+            );
             self.current_map
-                .insert(format!("orderfilter&ispassed_{}", k), v.0.is_some() as i8 as f64);
-            self.current_map
-                .insert(format!("orderfilter&istrade_{}", k),v.1 as i8 as f64);
+                .insert(format!("orderfilter&istrade_{}", k), v.1 as i8 as f64);
         }
     }
 
@@ -83,37 +87,54 @@ impl DatabaseRT {
                 .cloned()
                 .unwrap_or_default();
             self.current_map
-                .insert(format!("tradestate&position&qty_{i}", ), position.qty);
+                .insert(format!("tradestate&position&qty_{i}",), position.qty);
+            self.current_map.insert(
+                format!("tradestate&position&leverage_{i}",),
+                position.leverage,
+            );
+            self.current_map.insert(
+                format!("tradestate&position&avgopenprice_{i}",),
+                position.avg_open_price,
+            );
+            self.current_map.insert(
+                format!("tradestate&position&positionidx_{i}",),
+                position.position_idx as f64,
+            );
+            self.current_map.insert(
+                format!("tradestate&position&pnlpercent_{i}",),
+                position.pnl_percent,
+            );
             self.current_map
-                .insert(format!("tradestate&position&leverage_{i}", ), position.leverage);
-            self.current_map
-                .insert(format!("tradestate&position&avgopenprice_{i}", ), position.avg_open_price);
-            self.current_map
-                .insert(format!("tradestate&position&positionidx_{i}", ), position.position_idx as f64);
-            self.current_map
-                .insert(format!("tradestate&position&pnlpercent_{i}", ), position.pnl_percent);
-            self.current_map
-                .insert(format!("tradestate&position&pnlqty_{i}", ), position.pnl_qty);
-            self.current_map
-                .insert(format!("tradestate&position&isactive_{i}", ), position.is_active as i8 as f64);
+                .insert(format!("tradestate&position&pnlqty_{i}",), position.pnl_qty);
+            self.current_map.insert(
+                format!("tradestate&position&isactive_{i}",),
+                position.is_active as i8 as f64,
+            );
         }
         self.current_map
             .insert("tradestate&capital".to_string(), trade_state.capital.0);
-        self.current_map
-            .insert("tradestate&ordertriggerslen".to_string(),                 trade_state
-                    .orders_trigger
-                    .borrow()
-                    .values()
-                    .map(|bind| bind.len())
-                    .sum::<usize>() as f64,);
-        self.current_map.insert("tradestate&ordernsum".to_string(), trade_state
+        self.current_map.insert(
+            "tradestate&ordertriggerslen".to_string(),
+            trade_state
+                .orders_trigger
+                .borrow()
+                .values()
+                .map(|bind| bind.len())
+                .sum::<usize>() as f64,
+        );
+        self.current_map.insert(
+            "tradestate&ordernsum".to_string(),
+            trade_state
                 .orders
                 .borrow()
                 .values()
                 .map(|bind| bind.len())
-                .sum::<usize>() as f64,);
-        self.current_map
-            .insert("tradestate&ordernsum".to_string(), trade_state.positions.borrow().values().count() as f64);
+                .sum::<usize>() as f64,
+        );
+        self.current_map.insert(
+            "tradestate&ordernsum".to_string(),
+            trade_state.positions.borrow().values().count() as f64,
+        );
     }
 
     pub fn push_map(&mut self) {
@@ -139,18 +160,12 @@ mod tests {
         let mut db = DatabaseRT::default();
         db.push_src(&SRC_EL);
         db.push_map();
-        assert_eq_pr!(
-            db.base[0].len(),
-            SRC_EL.len()
-        );
+        assert_eq_pr!(db.base[0].len(), SRC_EL.len());
         assert_eq_pr!(db.base[0]["src_0"], SRC_EL[0]);
         assert_eq_pr!(db.base[0]["src_1"], SRC_EL[1]);
         db.push_src(&SRC_EL1);
         db.push_map();
-        assert_eq_pr!(
-            db.base[1].len(),
-            SRC_EL.len()
-        );
+        assert_eq_pr!(db.base[1].len(), SRC_EL.len());
         assert_eq_pr!(db.base[0]["src_0"], SRC_EL[0]);
         assert_eq_pr!(db.base[0]["src_1"], SRC_EL[1]);
         assert_eq_pr!(db.base[1]["src_0"], SRC_EL1[0]);

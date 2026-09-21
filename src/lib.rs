@@ -1,2 +1,2 @@
-pub mod db_realtime;
 pub mod db;
+pub mod db_realtime;
