@@ -1,61 +1,17 @@
+use std::ops::RangeBounds;
 use std::path::PathBuf;
 
-use bc_runtime_components::state::State;
-use bc_utils_lg::prelude::*;
+use fjall::Slice;
 use fjall::{Database, Keyspace, KeyspaceCreateOptions, PersistMode::SyncAll};
 use serde::{Deserialize, Serialize};
 use serde_json5::{from_slice, to_string};
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
-pub struct StateDeserialize {
-    pub indications: MAP<String, f64>,
-    pub signals_train: MAP<String, f64>,
-    pub signals: MAP<String, Signal>,
-    pub utils_state: MAP<String, f64>,
-    pub orders: MAP<String, OrderWrap>,
-    pub orders_filtered: MAP<String, (bool, bool)>,
-}
-
-impl<'a> From<&State<'a>> for StateDeserialize {
-    fn from(value: &State) -> Self {
-        StateDeserialize {
-            indications: value
-                .indications
-                .iter()
-                .map(|(k, v)| (k.to_string(), *v))
-                .collect(),
-            signals_train: value
-                .signals_train
-                .iter()
-                .map(|(k, v)| (k.to_string(), *v))
-                .collect(),
-            signals: value
-                .signals
-                .iter()
-                .map(|(k, v)| (k.to_string(), *v))
-                .collect(),
-            utils_state: value
-                .utils_state
-                .iter()
-                .map(|(k, v)| (k.to_string(), *v))
-                .collect(),
-            orders: value
-                .orders
-                .iter()
-                .map(|(k, v)| (k.to_string(), v.clone()))
-                .collect(),
-            orders_filtered: value
-                .orders_filtered
-                .iter()
-                .map(|(k, v)| (k.to_string(), (v.0.is_some(), v.1)))
-                .collect(),
-        }
-    }
-}
+use crate::prelude::*;
 
 pub struct DatabaseH {
     pub db: Database,
     pub state: Keyspace,
+    pub trade_state: Keyspace,
     pub src: Keyspace,
     pub ind_col: Keyspace,
     pub ind_val: Keyspace,
@@ -66,6 +22,7 @@ impl DatabaseH {
         let db = Database::builder(path).open()?;
         Ok(DatabaseH {
             state: db.keyspace("state", KeyspaceCreateOptions::default)?,
+            trade_state: db.keyspace("trade_state", KeyspaceCreateOptions::default)?,
             src: db.keyspace("src", KeyspaceCreateOptions::default)?,
             ind_col: db.keyspace("ind_col", KeyspaceCreateOptions::default)?,
             ind_val: db.keyspace("ind_val", KeyspaceCreateOptions::default)?,
@@ -84,14 +41,24 @@ impl DatabaseH {
         )
     }
 
-    pub fn read<T: for<'a> Deserialize<'a>>(
-        keyspace: &Keyspace,
-        key: &[u8],
-    ) -> fjall::Result<Option<T>> {
-        if let Some(state) = keyspace.get(key)? {
-            return Ok(from_slice(&state).map_err(|_| fjall::Error::KeyspaceDeleted)?);
+    pub fn read<T: for<'a> Deserialize<'a>>(keyspace: &Keyspace, key: &[u8]) -> DbResult<T> {
+        if let Some(state) = keyspace.get(key).map_err(|e| DbError::Read(e))? {
+            return from_slice(&state).map_err(|e| DbError::ValueParse(e));
         }
-        Err(fjall::Error::KeyspaceDeleted)
+        Err(DbError::ValueNotFound)
+    }
+
+    pub fn load_history<T: for<'a> Deserialize<'a>, K: AsRef<[u8]>>(
+        keyspace: &Keyspace,
+        range: impl RangeBounds<K>,
+    ) -> DbResult<Vec<(Slice, T)>> {
+        keyspace
+            .range(range)
+            .map(|g| {
+                let (k, v) = g.into_inner()?;
+                Ok((k, from_slice(&v).map_err(|e| DbError::ValueParse(e))?))
+            })
+            .collect::<DbResult<_>>()
     }
 }
 
@@ -101,7 +68,7 @@ mod tests {
 
     use super::*;
     use bc_runtime_components::test_state::state::STATE;
-    use bc_test_kit::src::SRC_EL;
+    use bc_test_kit::prelude::*;
 
     #[test]
     fn read_res_1() {
@@ -110,11 +77,27 @@ mod tests {
         let value = StateDeserialize::from(&STATE());
         DatabaseH::insert(&db.state, &key, &value).unwrap();
         assert_eq!(
-            DatabaseH::read::<StateDeserialize>(&db.state, &key)
-                .unwrap()
-                .unwrap(),
+            DatabaseH::read::<StateDeserialize>(&db.state, &key).unwrap(),
             value
         );
         remove_dir_all("test1").unwrap()
+    }
+
+    #[test]
+    fn load_history_res_1() {
+        let db = DatabaseH::new("test2".into()).unwrap();
+        let key = SRC_EL1[0].to_be_bytes();
+        let value = StateDeserialize::from(&STATE());
+        DatabaseH::insert(&db.state, &key, &value).unwrap();
+        let key2 = SRC_EL[0].to_be_bytes();
+        DatabaseH::insert(&db.state, &key2, &value).unwrap();
+        let history = DatabaseH::load_history::<StateDeserialize, _>(&db.state, key..).unwrap();
+        let test = vec![
+            (<[u8; _] as Into<Slice>>::into(key), value.clone()),
+            (key2.into(), value.clone()),
+        ];
+        assert_eq_pr!(history.len(), 2);
+        assert_eq_pr!(history, test);
+        remove_dir_all("test2").unwrap()
     }
 }

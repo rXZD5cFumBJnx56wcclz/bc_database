@@ -1,6 +1,6 @@
 [package]
 name = "bc_database"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2024"
 
 [dependencies]
@@ -11,6 +11,7 @@ bc_runtime_components = {path = "../bc_runtime_components", features = ["test_st
 fjall = "3.1.10"
 serde = "1"
 serde_json5 = "0.1"
+thiserror = "2"
 
 [dev-dependencies]
 bc_test_kit = {path = "../bc_test_kit"}
