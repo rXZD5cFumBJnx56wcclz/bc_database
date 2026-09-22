@@ -47,12 +47,12 @@ mod tests {
     #[test]
     fn push_src_res_1() {
         let mut db = DatabaseRT::default();
-        SRC_EL.as_slice().transform(&mut db.current_map);
+        SRC_EL.as_slice().transform(&mut db.current_map, "");
         db.push_map();
         assert_eq_pr!(db.base[0].len(), SRC_EL.len());
         assert_eq_pr!(db.base[0]["src_0"], SRC_EL[0]);
         assert_eq_pr!(db.base[0]["src_1"], SRC_EL[1]);
-        SRC_EL1.as_slice().transform(&mut db.current_map);
+        SRC_EL1.as_slice().transform(&mut db.current_map, "");
         db.push_map();
         assert_eq_pr!(db.base[1].len(), SRC_EL.len());
         assert_eq_pr!(db.base[0]["src_0"], SRC_EL[0]);
@@ -65,7 +65,7 @@ mod tests {
     fn push_state_res_1() {
         let mut db = DatabaseRT::default();
         let state = STATE();
-        StateDeserialize::from(&state).transform(&mut db.current_map);
+        StateDeserialize::from(&state).transform(&mut db.current_map, "");
         db.push_map();
         assert_eq_pr!(db.base[0]["ind_rma_1"], state.indications["rma_1"]);
         assert_eq_pr!(
@@ -76,7 +76,7 @@ mod tests {
             db.base[0]["sign&prob_signal"],
             state.signals["signal"].probability
         );
-        StateDeserialize::from(&state).transform(&mut db.current_map);
+        StateDeserialize::from(&state).transform(&mut db.current_map, "");
         db.push_map();
         assert_eq_pr!(db.base[1]["ind_rma_1"], state.indications["rma_1"]);
         assert_eq_pr!(
@@ -93,10 +93,10 @@ mod tests {
     fn push_trade_state_res_1() {
         let mut db = DatabaseRT::default();
         let trade_state = TRADE_STATE();
-        trade_state.transform(&mut db.current_map);
+        trade_state.transform(&mut db.current_map, "");
         db.push_map();
         assert_eq_pr!(db.base[0]["tradestate&capital"], trade_state.capital.0);
-        trade_state.transform(&mut db.current_map);
+        trade_state.transform(&mut db.current_map, "");
         db.push_map();
         assert_eq_pr!(db.base[1]["tradestate&capital"], trade_state.capital.0);
     }

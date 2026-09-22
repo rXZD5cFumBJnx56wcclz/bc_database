@@ -12,6 +12,8 @@ pub struct DatabaseH {
     pub db: Database,
     pub state: Keyspace,
     pub trade_state: Keyspace,
+    pub trade_state_executed: Keyspace,
+    pub trade_state_cleared: Keyspace,
     pub src: Keyspace,
     pub ind_col: Keyspace,
     pub ind_val: Keyspace,
@@ -23,6 +25,10 @@ impl DatabaseH {
         Ok(DatabaseH {
             state: db.keyspace("state", KeyspaceCreateOptions::default)?,
             trade_state: db.keyspace("trade_state", KeyspaceCreateOptions::default)?,
+            trade_state_executed: db
+                .keyspace("trade_state_executed", KeyspaceCreateOptions::default)?,
+            trade_state_cleared: db
+                .keyspace("trade_state_cleared", KeyspaceCreateOptions::default)?,
             src: db.keyspace("src", KeyspaceCreateOptions::default)?,
             ind_col: db.keyspace("ind_col", KeyspaceCreateOptions::default)?,
             ind_val: db.keyspace("ind_val", KeyspaceCreateOptions::default)?,
